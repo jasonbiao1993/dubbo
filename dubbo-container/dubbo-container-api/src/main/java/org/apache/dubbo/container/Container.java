@@ -20,6 +20,7 @@ import org.apache.dubbo.common.extension.SPI;
 
 /**
  * Container. (SPI, Singleton, ThreadSafe)
+ * 容器扩展
  */
 @SPI("spring")
 public interface Container {

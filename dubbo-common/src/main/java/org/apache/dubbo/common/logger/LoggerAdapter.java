@@ -22,6 +22,7 @@ import java.io.File;
 
 /**
  * Logger provider
+ * 日志适配扩展
  */
 @SPI
 public interface LoggerAdapter {

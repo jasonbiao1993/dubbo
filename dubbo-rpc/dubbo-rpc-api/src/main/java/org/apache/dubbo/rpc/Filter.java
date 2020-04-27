@@ -34,6 +34,7 @@ import org.apache.dubbo.common.extension.SPI;
  *    remote call configured caching type's (e.g. Thread Local, JCache etc) implementation invoke method gets called.
  * </pre>
  * Filter. (SPI, Singleton, ThreadSafe)
+ * 调用拦截扩展
  *
  * @see org.apache.dubbo.rpc.filter.GenericFilter
  * @see org.apache.dubbo.rpc.filter.EchoFilter

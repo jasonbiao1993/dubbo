@@ -24,6 +24,7 @@ import static org.apache.dubbo.common.constants.FilterConstants.VALIDATION_KEY;
 
 /**
  * Instance of Validation interface provide instance of {@link Validator} based on the value of <b>validation</b> attribute.
+ * 验证扩展
  */
 @SPI("jvalidation")
 public interface Validation {

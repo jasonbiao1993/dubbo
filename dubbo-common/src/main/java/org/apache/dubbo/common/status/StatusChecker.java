@@ -20,6 +20,7 @@ import org.apache.dubbo.common.extension.SPI;
 
 /**
  * StatusChecker
+ * 状态检查扩展
  */
 @SPI
 public interface StatusChecker {

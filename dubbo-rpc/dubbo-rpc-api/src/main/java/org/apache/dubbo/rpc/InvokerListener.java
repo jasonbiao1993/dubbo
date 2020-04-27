@@ -20,6 +20,7 @@ import org.apache.dubbo.common.extension.SPI;
 
 /**
  * InvokerListener. (SPI, Singleton, ThreadSafe)
+ * 引用监听扩展
  */
 @SPI
 public interface InvokerListener {

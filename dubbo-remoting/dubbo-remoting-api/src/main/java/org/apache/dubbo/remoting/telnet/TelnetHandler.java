@@ -22,6 +22,7 @@ import org.apache.dubbo.remoting.RemotingException;
 
 /**
  * TelnetHandler
+ * Telnet 命令扩展
  */
 @SPI
 public interface TelnetHandler {

@@ -24,6 +24,7 @@ import org.apache.dubbo.remoting.RemotingException;
  * Networker. (SPI, Singleton, ThreadSafe)
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Peer-to-peer">Peer-to-peer</a>
+ * 组网扩展
  */
 @SPI
 public interface Networker {

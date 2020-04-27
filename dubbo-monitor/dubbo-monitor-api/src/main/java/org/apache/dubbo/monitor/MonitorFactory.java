@@ -22,6 +22,7 @@ import org.apache.dubbo.common.extension.SPI;
 
 /**
  * MonitorFactory. (SPI, Singleton, ThreadSafe)
+ * 监控中心扩展
  */
 @SPI("dubbo")
 public interface MonitorFactory {

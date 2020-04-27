@@ -22,6 +22,7 @@ import org.apache.dubbo.common.extension.SPI;
 
 /**
  * SpiExtensionFactory
+ * Spi 扩展工厂
  */
 public class SpiExtensionFactory implements ExtensionFactory {
 

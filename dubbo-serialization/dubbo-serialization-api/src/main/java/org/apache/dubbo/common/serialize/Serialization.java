@@ -31,6 +31,7 @@ import java.io.OutputStream;
  * <pre>
  *     e.g. &lt;dubbo:protocol serialization="xxx" /&gt;
  * </pre>
+ * 序列化扩展
  */
 @SPI("hessian2")
 public interface Serialization {

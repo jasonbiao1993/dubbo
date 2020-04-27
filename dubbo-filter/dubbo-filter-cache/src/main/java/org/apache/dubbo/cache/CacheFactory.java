@@ -24,7 +24,7 @@ import org.apache.dubbo.rpc.Invocation;
 /**
  * Interface needs to be implemented by all the cache store provider.Along with implementing <b>CacheFactory</b> interface
  * entry needs to be added in org.apache.dubbo.cache.CacheFactory file in a classpath META-INF sub directories.
- *
+ * 缓存扩展
  * @see Cache
  */
 @SPI("lru")
