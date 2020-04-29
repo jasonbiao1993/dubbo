@@ -171,7 +171,9 @@ public class RegistryProtocol implements Protocol {
     }
 
     public void register(URL registryUrl, URL registeredProviderUrl) {
+        // 获取 Registry
         Registry registry = registryFactory.getRegistry(registryUrl);
+        // 注册服务
         registry.register(registeredProviderUrl);
 
         ProviderModel model = ApplicationModel.getProviderModel(registeredProviderUrl.getServiceKey());
@@ -184,37 +186,63 @@ public class RegistryProtocol implements Protocol {
 
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
+        // 注册url，zookeeper
+        // zookeeper://mcip:2291/org.apache.dubbo.registry.RegistryService?application=dubbo-demo
+        // &backup=mcip:2292,mcip:2293&dubbo=2.0.2&export=dubbo%3A%2F%2F192.168.56.1%3A20880%2Forg.study.service.UserService%3Fanyhost%3Dtrue%26application%3Ddubbo-demo%26bind.ip%3D192.168.56.1%26bind.port%3D20880%26deprecated%3Dfalse%26dubbo%3D2.0.2%26dynamic%3Dtrue%26generic%3Dfalse%26interface%3Dorg.study.service.UserService%26methods%3DgetUserById%2Cupdate%2Cinsert%2CtransactionalTest%2CgetUserByUserId%2Cdelete%26pid%3D12956%26release%3D2.7.5%26revision%3D1.0-SNAPSHOT%26side%3Dprovider%26timestamp%3D1584262152345&pid=12956&release=2.7.5&timestamp=1584262152342
+        // 获取注册中心 URL，以 zookeeper 注册中心为例，得到的示例 URL 如下：
+        // zookeeper://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider&dubbo=2.0.2&export=dubbo%3A%2F%2F172.17.48.52%3A20880%2Fcom.alibaba.dubbo.demo.DemoService%3Fanyhost%3Dtrue%26application%3Ddemo-provider
         URL registryUrl = getRegistryUrl(originInvoker);
         // url to export locally
+        // 暴露服务的url
+        // dubbo://192.168.56.1:20880/org.study.service.UserService?anyhost=true&application=dubbo-demo&bind.ip=192.168.56.1&bind.port=20880&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=org.study.service.UserService&methods=getUserById,update,insert,transactionalTest,getUserByUserId,delete&pid=12956&release=2.7.5&revision=1.0-SNAPSHOT&side=provider&timestamp=1584262152345
         URL providerUrl = getProviderUrl(originInvoker);
 
         // Subscribe the override data
         // FIXME When the provider subscribes, it will affect the scene : a certain JVM exposes the service and call
         //  the same service. Because the subscribed is cached key with the name of the service, it causes the
         //  subscription information to cover.
+        // 生成最终url
+        // provider://192.168.56.1:20880/org.study.service.UserService?anyhost=true&application=dubbo-demo&bind.ip=192.168.56.1&bind.port=20880&category=configurators&check=false&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=org.study.service.UserService&methods=getUserById,update,insert,transactionalTest,getUserByUserId,delete&pid=12956&release=2.7.5&revision=1.0-SNAPSHOT&side=provider&timestamp=1584262152345
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(providerUrl);
+
+        // url与service绑定，放入容器中，远程调用时根据url找到serviceimpl
+        // 创建监听器
         final OverrideListener overrideSubscribeListener = new OverrideListener(overrideSubscribeUrl, originInvoker);
         overrideListeners.put(overrideSubscribeUrl, overrideSubscribeListener);
 
         providerUrl = overrideUrlWithConfig(providerUrl, overrideSubscribeListener);
         //export invoker
+        // 注册invoker到本地dubbo.expo
+        // 调用DubboProtocol.export，其中openServer开启netty监听，这个地方不清楚，以后研究netty后再回来看
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker, providerUrl);
 
         // url to registry
+        // 最终的注册到zookeeper
+        // 根据 URL 加载 Registry 实现类，比如 ZookeeperRegistry
         final Registry registry = getRegistry(originInvoker);
         final URL registeredProviderUrl = getUrlToRegistry(providerUrl, registryUrl);
         // decide if we need to delay publish
         boolean register = providerUrl.getParameter(REGISTER_KEY, true);
+        // 根据 register 的值决定是否注册服务
         if (register) {
+            //服务注册
+            // 以zookeeper为例,建立一个znode
+            // /dubbo/org.study.service.UserDubboService2/providers/dubbo%3A%2F%2F192.168.56.1%3A20880%2Forg.study.service.UserDubboService2%3Fanyhost%3Dtrue%26application%3Ddubbo-demo%26deprecated%3Dfalse%26dubbo%3D2.0.2%26dynamic%3Dtrue%26generic%3Dfalse%26interface%3Dorg.study.service.UserDubboService2%26methods%3DgetUserByUserId%26pid%3D1376%26release%3D2.7.5%26revision%3D1.0-SNAPSHOT%26side%3Dprovider%26timestamp%3D1584271781245
+            // 向注册中心注册服务
             register(registryUrl, registeredProviderUrl);
         }
 
         // Deprecated! Subscribe to override rules in 2.6.x or before.
+        //  这里是注册目录节点
+        // /dubbo/org.study.service.UserDubboService2/configurators
+        // 向注册中心进行订阅 override 数据
         registry.subscribe(overrideSubscribeUrl, overrideSubscribeListener);
 
+        // 记录registerUrl与subscribeUrl
         exporter.setRegisterUrl(registeredProviderUrl);
         exporter.setSubscribeUrl(overrideSubscribeUrl);
         //Ensure that a new exporter instance is returned every time export
+        // 创建并返回 DestroyableExporter
         return new DestroyableExporter<>(exporter);
     }
 
@@ -229,8 +257,11 @@ public class RegistryProtocol implements Protocol {
     private <T> ExporterChangeableWrapper<T> doLocalExport(final Invoker<T> originInvoker, URL providerUrl) {
         String key = getCacheKey(originInvoker);
 
+        // 访问缓存
         return (ExporterChangeableWrapper<T>) bounds.computeIfAbsent(key, s -> {
+            // 创建 Invoker 为委托类对象
             Invoker<?> invokerDelegate = new InvokerDelegate<>(originInvoker, providerUrl);
+            // 调用 protocol 的 export 方法导出服务
             return new ExporterChangeableWrapper<>((Exporter<T>) protocol.export(invokerDelegate), originInvoker);
         });
     }

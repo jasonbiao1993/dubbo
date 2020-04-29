@@ -42,13 +42,16 @@ public class DubboBootstrapApplicationListener extends OneTimeExecutionApplicati
     @Override
     public void onApplicationContextEvent(ApplicationContextEvent event) {
         if (event instanceof ContextRefreshedEvent) {
+            // dubbo服务启动
             onContextRefreshedEvent((ContextRefreshedEvent) event);
         } else if (event instanceof ContextClosedEvent) {
+            // dubbo服务关闭
             onContextClosedEvent((ContextClosedEvent) event);
         }
     }
 
     private void onContextRefreshedEvent(ContextRefreshedEvent event) {
+        // 构造方法中初始化的,this.dubboBootstrap = DubboBootstrap.getInstance();
         dubboBootstrap.start();
     }
 

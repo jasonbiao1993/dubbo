@@ -497,26 +497,42 @@ public class DubboBootstrap extends GenericEventListener {
      * Initialize
      */
     private void initialize() {
+        //已初始化直接返回，CAS保证原子性
         if (!initialized.compareAndSet(false, true)) {
             return;
         }
 
+        // 扩展点加载机制，SPI的强化版，强在哪里现在还不知道
+        // 实例化META-INF/dubbo/internal/org.apache.dubbo.common.context.FrameworkExt文件中的三个类
+        // org.apache.dubbo.common.config.Environment : 环境变量组件,在new DubboBootstrap()时，已经实例化，这里拿的是缓存，下面的configManager也是。
+        // org.apache.dubbo.rpc.model.ServiceRepository : Service仓库初始化了两个类EchoService、GenericService
+        // org.apache.dubbo.config.context.ConfigManager ： dubbo所有的配置信息。
+        // 所有配置的父类AbstractConfig.addIntoConfigManager()被@PostConstruct注解，Bean初始化后会写入configManager
         ApplicationModel.initFrameworkExts();
 
+        // 外部配置读取，对应<dubbo:config-center />，一般未设置
         startConfigCenter();
 
+        // configManager.configCenter为空时，
+        // 使用<dubbo:registry />中配置创建ConfigCenter
+        // <dubbo:registry address="" />默认的zookeeper,根据address连接zookeeper并获取配置信息，(这里只是获取配置信息，并不是注册)
         useRegistryAsConfigCenterIfNecessary();
 
         startMetadataReport();
 
+        // 加载生成registryId ProtocolId
         loadRemoteConfigs();
 
+        // 验证标签所有属性
+        // application、Metadata、Provider、Consumer、Monitor、Metrics、Module、Ssl
         checkGlobalConfigs();
 
+        // 初始化元数据服务
         initMetadataService();
 
         initMetadataServiceExporter();
 
+        // 初始化事件监听器
         initEventListener();
 
         if (logger.isInfoEnabled()) {
@@ -698,11 +714,13 @@ public class DubboBootstrap extends GenericEventListener {
      */
     public DubboBootstrap start() {
         if (started.compareAndSet(false, true)) {
+            // 初始化
             initialize();
             if (logger.isInfoEnabled()) {
                 logger.info(NAME + " is starting...");
             }
             // 1. export Dubbo Services
+            // 暴露dubbo服务（<dubbo:service />注册到注册表）
             exportServices();
 
             // Not only provider register
@@ -713,6 +731,7 @@ public class DubboBootstrap extends GenericEventListener {
                 registerServiceInstance();
             }
 
+            // 引用dubbo服务(<dubbo:reference /> 创建代理)
             referServices();
 
             if (logger.isInfoEnabled()) {
@@ -861,18 +880,22 @@ public class DubboBootstrap extends GenericEventListener {
     }
 
     private void exportServices() {
+        // 遍历所有<dubbo:service />生成的ServiceBean
         configManager.getServices().forEach(sc -> {
             // TODO, compatible with ServiceConfig.export()
+            // 与ServiceConfig完全兼容
             ServiceConfig serviceConfig = (ServiceConfig) sc;
             serviceConfig.setBootstrap(this);
 
             if (exportAsync) {
+                // 异步注册
                 ExecutorService executor = executorRepository.getServiceExporterExecutor();
                 Future<?> future = executor.submit(() -> {
                     sc.export();
                 });
                 asyncExportingFutures.add(future);
             } else {
+                // 同步注册
                 sc.export();
                 exportedServices.add(sc);
             }

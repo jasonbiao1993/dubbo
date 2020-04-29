@@ -584,6 +584,9 @@ public abstract class AbstractConfig implements Serializable {
      *
      * @see ConfigManager#addConfig(AbstractConfig)
      * @since 2.7.5
+     *
+     * 当类初始化后执行此方法
+     * 用于添加配置类到 {@link org.apache.dubbo.config.context.ConfigManager}
      */
     @PostConstruct
     public void addIntoConfigManager() {
