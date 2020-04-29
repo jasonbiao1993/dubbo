@@ -42,6 +42,7 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
 
     @Override
     public <T> T getProxy(Invoker<T> invoker) throws RpcException {
+        // 调用重载方法
         return getProxy(invoker, false);
     }
 
@@ -49,8 +50,10 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
     public <T> T getProxy(Invoker<T> invoker, boolean generic) throws RpcException {
         Set<Class<?>> interfaces = new HashSet<>();
 
+        // 获取接口列表
         String config = invoker.getUrl().getParameter(INTERFACES);
         if (config != null && config.length() > 0) {
+            // 切分接口列表
             String[] types = COMMA_SPLIT_PATTERN.split(config);
             if (types != null && types.length > 0) {
                 for (int i = 0; i < types.length; i++) {
@@ -60,13 +63,18 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
             }
         }
 
+        // 为 http 和 hessian 协议提供泛化调用支持，参考 pull request #1827
         if (!GenericService.class.isAssignableFrom(invoker.getInterface()) && generic) {
+            // 设置 GenericService.class 到数组中
             interfaces.add(com.alibaba.dubbo.rpc.service.GenericService.class);
         }
 
         interfaces.add(invoker.getInterface());
+
+        // 设置服务接口类和 EchoService.class 到 interfaces 中
         interfaces.addAll(Arrays.asList(INTERNAL_INTERFACES));
 
+        // 调用重载方法
         return getProxy(invoker, interfaces.toArray(new Class<?>[0]));
     }
 
