@@ -44,6 +44,8 @@ import static org.apache.dubbo.registry.Constants.REGISTRY_RETRY_PERIOD_KEY;
 
 /**
  * FailbackRegistry. (SPI, Prototype, ThreadSafe)
+ *
+ * 故障自动恢复注册
  */
 public abstract class FailbackRegistry extends AbstractRegistry {
 

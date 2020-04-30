@@ -30,10 +30,12 @@ import java.util.List;
 
 /**
  * StaticDirectory
+ * 静态服务目录
  */
 public class StaticDirectory<T> extends AbstractDirectory<T> {
     private static final Logger logger = LoggerFactory.getLogger(StaticDirectory.class);
 
+    // Invoker 列表
     private final List<Invoker<T>> invokers;
 
     public StaticDirectory(List<Invoker<T>> invokers) {
@@ -58,6 +60,7 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
 
     @Override
     public Class<T> getInterface() {
+        // 获取接口类
         return invokers.get(0).getInterface();
     }
 
@@ -66,12 +69,17 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
         return invokers;
     }
 
+    /**
+     *  // 检测服务目录是否可用
+     * @return true/false
+     */
     @Override
     public boolean isAvailable() {
         if (isDestroyed()) {
             return false;
         }
         for (Invoker<T> invoker : invokers) {
+            // 只要有一个 Invoker 是可用的，就认为当前目录是可用的
             if (invoker.isAvailable()) {
                 return true;
             }
@@ -84,7 +92,9 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
         if (isDestroyed()) {
             return;
         }
+        // 调用父类销毁逻辑
         super.destroy();
+        // 遍历 Invoker 列表，并执行相应的销毁逻辑
         for (Invoker<T> invoker : invokers) {
             invoker.destroy();
         }
@@ -102,6 +112,7 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
         List<Invoker<T>> finalInvokers = invokers;
         if (routerChain != null) {
             try {
+                // 经过routerChain后，返回符合的Invoker
                 finalInvokers = routerChain.route(getConsumerUrl(), invocation);
             } catch (Throwable t) {
                 logger.error("Failed to execute router: " + getUrl() + ", cause: " + t.getMessage(), t);
