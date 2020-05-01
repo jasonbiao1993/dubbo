@@ -30,6 +30,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * If the weights are different then it will use random.nextInt(w1 + w2 + ... + wn)
  * Note that if the performance of the machine is better than others, you can set a larger weight.
  * If the performance is not so good, you can set a smaller weight.
+ *
+ * 加权随机算法的具体实现
  */
 public class RandomLoadBalance extends AbstractLoadBalance {
 
@@ -56,28 +58,44 @@ public class RandomLoadBalance extends AbstractLoadBalance {
         weights[0] = firstWeight;
         // The sum of weights
         int totalWeight = firstWeight;
+        // for循环计算权重是否一样，并将计算总权重值
         for (int i = 1; i < length; i++) {
             int weight = getWeight(invokers.get(i), invocation);
             // save for later use
             weights[i] = weight;
             // Sum
+            // 累加权重
             totalWeight += weight;
+            // 检测当前服务提供者的权重与上一个服务提供者的权重是否相同，
+            // 不相同的话，则将 sameWeight 置为 false。
             if (sameWeight && weight != firstWeight) {
                 sameWeight = false;
             }
         }
+
+        // 下面的 if 分支主要用于获取随机数，并计算随机数落在哪个区间上
         if (totalWeight > 0 && !sameWeight) {
             // If (not every invoker has the same weight & at least one invoker's weight>0), select randomly based on totalWeight.
+            // 随机获取一个 [0, totalWeight) 区间内的数字
             int offset = ThreadLocalRandom.current().nextInt(totalWeight);
             // Return a invoker based on the random value.
+            // 循环让 offset 数减去服务提供者权重值，当 offset 小于0时，返回相应的 Invoker。
+            // 举例说明一下，我们有 servers = [A, B, C]，weights = [5, 3, 2]，offset = 7。
+            // 第一次循环，offset - 5 = 2 > 0，即 offset > 5，
+            // 表明其不会落在服务器 A 对应的区间上。
+            // 第二次循环，offset - 3 = -1 < 0，即 5 < offset < 8，
+            // 表明其会落在服务器 B 对应的区间上
             for (int i = 0; i < length; i++) {
+                // 让随机值 offset 减去权重值
                 offset -= weights[i];
                 if (offset < 0) {
+                    // 返回相应的 Invoker
                     return invokers.get(i);
                 }
             }
         }
         // If all invokers have the same weight value or totalWeight=0, return evenly.
+        // 权重一样平摊返回
         return invokers.get(ThreadLocalRandom.current().nextInt(length));
     }
 
