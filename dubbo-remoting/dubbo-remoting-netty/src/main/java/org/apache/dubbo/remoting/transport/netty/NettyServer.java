@@ -50,6 +50,8 @@ import static org.apache.dubbo.common.constants.CommonConstants.IO_THREADS_KEY;
 
 /**
  * NettyServer
+ *
+ * dubbo netty 服务端
  */
 public class NettyServer extends AbstractServer implements RemotingServer {
 
@@ -62,7 +64,7 @@ public class NettyServer extends AbstractServer implements RemotingServer {
     private org.jboss.netty.channel.Channel channel;
 
     public NettyServer(URL url, ChannelHandler handler) throws RemotingException {
-        // 调用父类构造方法
+        // 调用父类构造方法，正在处理请求的ChannelHandler在此传入，默认是 AllChannelHandler
         super(ExecutorUtil.setThreadName(url, SERVER_THREAD_POOL_NAME), ChannelHandlers.wrap(handler, url));
     }
 

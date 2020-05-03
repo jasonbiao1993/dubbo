@@ -56,11 +56,14 @@ public class HeaderExchangeClient implements ExchangeClient {
     public HeaderExchangeClient(Client client, boolean startTimer) {
         Assert.notNull(client, "Client can't be null");
         this.client = client;
+        // 创建 HeaderExchangeChannel 对象
         this.channel = new HeaderExchangeChannel(client);
 
         if (startTimer) {
+            // 以下代码均与心跳检测逻辑有关
             URL url = client.getUrl();
             startReconnectTask(url);
+            // 心跳检查
             startHeartBeatTask(url);
         }
     }
@@ -191,6 +194,7 @@ public class HeaderExchangeClient implements ExchangeClient {
             AbstractTimerTask.ChannelProvider cp = () -> Collections.singletonList(HeaderExchangeClient.this);
             int heartbeat = getHeartbeat(url);
             long heartbeatTick = calculateLeastDuration(heartbeat);
+            // 心跳
             this.heartBeatTimerTask = new HeartbeatTimerTask(cp, heartbeatTick, heartbeat);
             IDLE_CHECK_TIMER.newTimeout(heartBeatTimerTask, heartbeatTick, TimeUnit.MILLISECONDS);
         }
@@ -201,6 +205,7 @@ public class HeaderExchangeClient implements ExchangeClient {
             AbstractTimerTask.ChannelProvider cp = () -> Collections.singletonList(HeaderExchangeClient.this);
             int idleTimeout = getIdleTimeout(url);
             long heartbeatTimeoutTick = calculateLeastDuration(idleTimeout);
+            // 续约
             this.reconnectTimerTask = new ReconnectTimerTask(cp, heartbeatTimeoutTick, idleTimeout);
             IDLE_CHECK_TIMER.newTimeout(reconnectTimerTask, heartbeatTimeoutTick, TimeUnit.MILLISECONDS);
         }
@@ -208,10 +213,12 @@ public class HeaderExchangeClient implements ExchangeClient {
 
     private void doClose() {
         if (heartBeatTimerTask != null) {
+            // 关闭心跳检查
             heartBeatTimerTask.cancel();
         }
 
         if (reconnectTimerTask != null) {
+            // 关闭从联接
             reconnectTimerTask.cancel();
         }
     }

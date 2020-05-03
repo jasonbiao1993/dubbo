@@ -139,8 +139,10 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
                     + ", dubbo version is " + Version.getVersion() + ", this invoker should not be used any longer");
         }
         RpcInvocation invocation = (RpcInvocation) inv;
+        // 设置 Invoker
         invocation.setInvoker(this);
         if (CollectionUtils.isNotEmptyMap(attachment)) {
+            // 设置 attachment
             invocation.addAttachmentsIfAbsent(attachment);
         }
         Map<String, Object> contextAttachments = RpcContext.getContext().getAttachments();
@@ -151,14 +153,18 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
              * by the built-in retry mechanism of the Dubbo. The attachment to update RpcContext will no longer work, which is
              * a mistake in most cases (for example, through Filter to RpcContext output traceId and spanId and other information).
              */
+            // 添加 contextAttachments 到 RpcInvocation#attachment 变量中
             invocation.addAttachments(contextAttachments);
         }
 
         invocation.setInvokeMode(RpcUtils.getInvokeMode(url, invocation));
+
+        // 设置异步信息到 RpcInvocation#attachment 中
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
 
         AsyncRpcResult asyncResult;
         try {
+            // 抽象方法，由子类实现
             asyncResult = (AsyncRpcResult) doInvoke(invocation);
         } catch (InvocationTargetException e) { // biz exception
             Throwable te = e.getTargetException();
@@ -185,6 +191,7 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
 
     protected ExecutorService getCallbackExecutor(URL url, Invocation inv) {
         ExecutorService sharedExecutor = ExtensionLoader.getExtensionLoader(ExecutorRepository.class).getDefaultExtension().getExecutor(url);
+        // 是否异步执行，如果异步，包装线程池处理
         if (InvokeMode.SYNC == RpcUtils.getInvokeMode(getUrl(), inv)) {
             return new ThreadlessExecutor(sharedExecutor);
         } else {

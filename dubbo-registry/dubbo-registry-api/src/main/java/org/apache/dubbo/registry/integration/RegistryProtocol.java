@@ -459,7 +459,7 @@ public class RegistryProtocol implements Protocol {
         directory.subscribe(subscribeUrl.addParameter(CATEGORY_KEY,
                 PROVIDERS_CATEGORY + "," + CONFIGURATORS_CATEGORY + "," + ROUTERS_CATEGORY));
 
-        // 一个注册中心可能有多个服务提供者，因此这里需要将多个服务提供者合并为一个
+        // 一个注册中心可能有多个服务提供者，因此这里需要将多个服务提供者合并为一个, return MockClusterInvoker
         Invoker invoker = cluster.join(directory);
         return invoker;
     }

@@ -43,6 +43,14 @@ import static org.apache.dubbo.common.constants.CommonConstants.TIMEOUT_KEY;
 
 /**
  * DefaultFuture.
+ * {博客： http://dubbo.apache.org/zh-cn/docs/source_code_guide/service-invoking-process.html}
+ * DefaultFuture 调用编码：
+ * 一般情况下，服务消费方会并发调用多个服务，每个用户线程发送请求后，会调用不同 DefaultFuture 对象的 get 方法进行等待。 一段时间后，
+ * 服务消费方的线程池会收到多个响应对象。这个时候要考虑一个问题，如何将每个响应对象传递给相应的 DefaultFuture 对象，且不出错。
+ * 答案是通过调用编号。DefaultFuture 被创建时，会要求传入一个 Request 对象。此时 DefaultFuture 可从 Request 对象中获取调用编号，
+ * 并将 <调用编号, DefaultFuture 对象> 映射关系存入到静态 Map 中，即 FUTURES。线程池中的线程在收到 Response 对象后，
+ * 会根据 Response 对象中的调用编号到 FUTURES 集合中取出相应的 DefaultFuture 对象，然后再将 Response 对象设置到 DefaultFuture 对象中。
+ * 最后再唤醒用户线程，这样用户线程即可从 DefaultFuture 对象中获取调用结果了
  */
 public class DefaultFuture extends CompletableFuture<Object> {
 
@@ -50,6 +58,7 @@ public class DefaultFuture extends CompletableFuture<Object> {
 
     private static final Map<Long, Channel> CHANNELS = new ConcurrentHashMap<>();
 
+    // 通过静态变量相互持有对象
     private static final Map<Long, DefaultFuture> FUTURES = new ConcurrentHashMap<>();
 
     public static final Timer TIME_OUT_TIMER = new HashedWheelTimer(
@@ -79,9 +88,12 @@ public class DefaultFuture extends CompletableFuture<Object> {
     private DefaultFuture(Channel channel, Request request, int timeout) {
         this.channel = channel;
         this.request = request;
+
+        // 获取请求 id，这个 id 很重要，后面还会见到
         this.id = request.getId();
         this.timeout = timeout > 0 ? timeout : channel.getUrl().getPositiveParameter(TIMEOUT_KEY, DEFAULT_TIMEOUT);
         // put into waiting map.
+        // 存储 <requestId, DefaultFuture> 映射关系到 FUTURES 中, request和DefaultFuture 互相持有用于后续处理请求和响应
         FUTURES.put(id, this);
         CHANNELS.put(id, channel);
     }
@@ -120,6 +132,11 @@ public class DefaultFuture extends CompletableFuture<Object> {
         return CHANNELS.containsValue(channel);
     }
 
+    /**
+     * 请求发送处理
+     * @param channel
+     * @param request
+     */
     public static void sent(Channel channel, Request request) {
         DefaultFuture future = FUTURES.get(request.getId());
         if (future != null) {
@@ -150,12 +167,18 @@ public class DefaultFuture extends CompletableFuture<Object> {
         }
     }
 
+    /**
+     * 响应接收处理
+     * @param channel
+     * @param response
+     */
     public static void received(Channel channel, Response response) {
         received(channel, response, false);
     }
 
     public static void received(Channel channel, Response response, boolean timeout) {
         try {
+            // 根据调用编号从 FUTURES 集合中查找指定的 DefaultFuture 对象
             DefaultFuture future = FUTURES.remove(response.getId());
             if (future != null) {
                 Timeout t = future.timeoutCheckTask;
@@ -163,6 +186,7 @@ public class DefaultFuture extends CompletableFuture<Object> {
                     // decrease Time
                     t.cancel();
                 }
+                // 继续向下调用
                 future.doReceived(response);
             } else {
                 logger.warn("The timeout response finally returned at "
@@ -195,6 +219,8 @@ public class DefaultFuture extends CompletableFuture<Object> {
         if (res == null) {
             throw new IllegalStateException("response cannot be null");
         }
+
+        // 保存响应结果，用于后续获取
         if (res.getStatus() == Response.OK) {
             this.complete(res.getResult());
         } else if (res.getStatus() == Response.CLIENT_TIMEOUT || res.getStatus() == Response.SERVER_TIMEOUT) {
@@ -205,6 +231,7 @@ public class DefaultFuture extends CompletableFuture<Object> {
 
         // the result is returning, but the caller thread may still waiting
         // to avoid endless waiting for whatever reason, notify caller thread to return.
+        // 唤醒用户线程
         if (executor != null && executor instanceof ThreadlessExecutor) {
             ThreadlessExecutor threadlessExecutor = (ThreadlessExecutor) executor;
             if (threadlessExecutor.isWaiting()) {

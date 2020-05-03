@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * NettyClient.
+ * dubbo netty 客户端
  */
 public class NettyClient extends AbstractClient {
 
@@ -59,6 +60,10 @@ public class NettyClient extends AbstractClient {
         super(url, wrapChannelHandler(url, handler));
     }
 
+    /**
+     * netty 初始化，ChannelHandler处理，用于请求处理和响应
+     * @throws Throwable
+     */
     @Override
     protected void doOpen() throws Throwable {
         NettyHelper.setNettyLoggerFactory();
@@ -160,6 +165,7 @@ public class NettyClient extends AbstractClient {
         if (c == null || !c.isConnected()) {
             return null;
         }
+        // 获取一个 NettyChannel 类型对象
         return NettyChannel.getOrAddChannel(c, getUrl(), this);
     }
 

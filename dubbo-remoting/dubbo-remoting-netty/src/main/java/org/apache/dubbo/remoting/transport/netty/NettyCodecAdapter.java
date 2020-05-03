@@ -44,10 +44,19 @@ import static org.apache.dubbo.remoting.Constants.MIN_BUFFER_SIZE;
  */
 final class NettyCodecAdapter {
 
+    /**
+     * 编码器，包装Codec2
+     */
     private final ChannelHandler encoder = new InternalEncoder();
 
+    /**
+     * 网络解码器，包装Codec2
+     */
     private final ChannelHandler decoder = new InternalDecoder();
 
+    /**
+     * 通过 dubbo spi 获取
+     */
     private final Codec2 codec;
 
     private final URL url;
